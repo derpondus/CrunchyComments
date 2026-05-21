@@ -85,6 +85,7 @@ const spoilerButtonIcon = `
 const spoilerDelimiterLength = 2 // If we can get this automatically, we can remove this constant
 
 const commentParagraphSelector = ".comentario-card .comentario-card-body > p, .comentario-comment-editor-preview > p"
+const commentBodySelector = ".comentario-card .comentario-card-body, .comentario-comment-editor-preview"
 
 // Inject features into a comment editor
 function onEditorOpen(comentarioEditor) {
@@ -197,16 +198,39 @@ const replaceTimestamps = function (mainComentarioArea) {
 const replaceSpoilers = function (mainComentarioArea) {
 	// Added 's' flag to make dot match newlines
 	const spoilerRegex = /\|\|.*?\|\|/gs
+	const spoilerDelimiterRegex = /\|\|/
 
-	mainComentarioArea.querySelectorAll(commentParagraphSelector).forEach((comment) => {
-		if (comment.querySelector("span.crunchy-comments-spoiler-block") !== null) {
-			return
-		}
+	mainComentarioArea.querySelectorAll(commentBodySelector).forEach((commentBody) => {
+		let openingParagraph = null
+		commentBody.querySelector("> p").forEach((paragraph) => {
+			if (paragraph.querySelector("span.crunchy-comments-spoiler-block") !== null) {
+				return
+			}
 
-		comment.innerHTML = comment.innerHTML.replace(
-			spoilerRegex,
+			paragraph.innerHTML = paragraph.innerHTML.replace(
+				spoilerRegex,
 				(match) => `<span class="crunchy-comments-spoiler-block">${match.slice(2, -2).trim()}</span>`
-		)
+			)
+
+			// In case the delimiters are split by another feature (list, etc.)
+			const delimiters = paragraph.innerHTML.match(spoilerDelimiterRegex)
+			if (delimiters != null) {
+				if (openingParagraph == null) {
+					openingParagraph = paragraph
+				} else {
+					openingParagraph.innerHTML.replace(
+						spoilerDelimiterRegex,
+						(match) => `<span class="crunchy-comments-spoiler-block">${match.slice(2).trim()}`
+					)
+					paragraph.innerHTML.replace(
+						spoilerDelimiterRegex,
+						(match) => `${match.slice(0, -2).trim()}</span>`
+					)
+
+					openingParagraph = null
+				}
+			}
+		})
 	})
 }
 
